@@ -79,7 +79,7 @@ class Processor {
   ProcessStats* stats_;
 };
 
-void RemoveOriginalQuantization(JPEGData* jpg, int q_in[3][kDCTBlockSize]) {
+void RemoveOriginalQuantization(JPEGData* jpg, int q_in[3][kDCTBlockSize], ProcessStats* stats) {
   for (int i = 0; i < 3; ++i) {
     JPEGComponent& c = jpg->components[i];
     const int* q = &jpg->quant[c.quant_idx].values[0];
@@ -92,6 +92,8 @@ void RemoveOriginalQuantization(JPEGData* jpg, int q_in[3][kDCTBlockSize]) {
   for (int i = 0; i < 3; ++i)
     for (int j = 0; j < kDCTBlockSize; ++j) q[i][j] = 1;
   SaveQuantTables(q, jpg);
+  // GUETZLI_LOG(stats, "[RemoveOriginalQuantization]q_in:\n");
+  // GUETZLI_LOG_QUANT(stats, q_in);
 }
 
 void Processor::DownsampleImage(OutputImage* img) {
@@ -838,24 +840,29 @@ bool Processor::ProcessJpegData(const Params& params, const JPEGData& jpg_in,
   }
   {
     JPEGData jpg = jpg_in;
-    RemoveOriginalQuantization(&jpg, q_in);
+    RemoveOriginalQuantization(&jpg, q_in, stats_);
     OutputImage img(jpg.width, jpg.height);
     img.CopyFromJpegData(jpg);
     comparator_->Compare(img);
   }
   MaybeOutput(encoded_jpg);
+  GUETZLI_LOG(stats, "[ProcessJpegData]RemoveOriginalQuantization:\n");
+  GUETZLI_LOG_QUANT(stats_, q_in);
   int try_420 = (input_is_420 || params_.force_420 ||
                  (params_.try_420 && !IsGrayscale(jpg_in))) ? 1 : 0;
   int force_420 = (input_is_420 || params_.force_420) ? 1 : 0;
   for (int downsample = force_420; downsample <= try_420; ++downsample) {
+    fprintf(stdout, "[ProcessJpegData]input_is_420: %d, downsample: %d, force_420: %d, try_420: %d\n", input_is_420, downsample, force_420, try_420);
     JPEGData jpg = jpg_in;
-    RemoveOriginalQuantization(&jpg, q_in);
+    RemoveOriginalQuantization(&jpg, q_in, stats_);
     OutputImage img(jpg.width, jpg.height);
     img.CopyFromJpegData(jpg);
     if (downsample) {
       DownsampleImage(&img);
       img.SaveToJpegData(&jpg);
     }
+    GUETZLI_LOG(stats, "[ProcessJpegData]RemoveOriginalQuantization:\n");
+    GUETZLI_LOG_QUANT(stats_, q_in);
     int best_q[3][kDCTBlockSize];
     memcpy(best_q, q_in, sizeof(best_q));
     if (!SelectQuantMatrix(jpg, downsample != 0, best_q, &img)) {
@@ -868,6 +875,7 @@ bool Processor::ProcessJpegData(const Params& params, const JPEGData& jpg_in,
     img.CopyFromJpegData(jpg);
     img.ApplyGlobalQuantization(best_q);
 
+    GUETZLI_LOG(stats, "[ProcessJpegData]components:%zd\n", jpg.components.size());
     if (!downsample) {
       SelectFrequencyMasking(jpg, &img, 7, 1.0, false);
     } else {

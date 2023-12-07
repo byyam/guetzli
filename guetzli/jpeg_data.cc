@@ -18,6 +18,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <iostream>
 
 namespace guetzli {
 
@@ -70,6 +71,7 @@ void InitJPEGDataForYUV444(int w, int h, JPEGData* jpg) {
 void SaveQuantTables(const int q[3][kDCTBlockSize], JPEGData* jpg) {
   const size_t kTableSize = kDCTBlockSize * sizeof(q[0][0]);
   jpg->quant.clear();
+  // std::cout << "[SaveQuantTables]jpg->components.size(): " << jpg->components.size() << std::endl;
   int num_tables = 0;
   for (size_t i = 0; i < jpg->components.size(); ++i) {
     JPEGComponent* comp = &jpg->components[i];
@@ -79,9 +81,11 @@ void SaveQuantTables(const int q[3][kDCTBlockSize], JPEGData* jpg) {
       if (memcmp(&q[i][0], &jpg->quant[j].values[0], kTableSize) == 0) {
         comp->quant_idx = j;
         found = true;
+        // std::cout << "[SaveQuantTables]clear quant tables, quant same" << std::endl;
         break;
       }
     }
+    // std::cout << "[SaveQuantTables]clear quant tables, found: " << found << std::endl;
     if (!found) {
       JPEGQuantTable table;
       memcpy(&table.values[0], &q[i][0], kTableSize);

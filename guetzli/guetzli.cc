@@ -23,6 +23,8 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <chrono>
+#include <iostream>
 
 #include "guetzli/jpeg_data.h"
 #include "guetzli/jpeg_data_reader.h"
@@ -302,6 +304,10 @@ int main(int argc, char** argv) {
   params.butteraugli_target =
       static_cast<float>(guetzli::ButteraugliScoreForQuality(quality));
 
+  std::cout << "params.butteraugli_target: " << params.butteraugli_target << std::endl;
+
+  auto start = std::chrono::high_resolution_clock::now();
+
   guetzli::ProcessStats stats;
 
   if (verbose) {
@@ -350,5 +356,11 @@ int main(int argc, char** argv) {
   }
 
   WriteFileOrDie(argv[opt_idx + 1], out_data);
+
+  auto stop = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+  std::cout << "Time taken by Guetzli: " << duration.count() << " microseconds"
+            << std::endl;
+
   return 0;
 }
