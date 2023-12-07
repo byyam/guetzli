@@ -7,3 +7,7 @@ EXECUTABLES = butteraugli
 all: butteraugli.o butteraugli_main.o $(EXECUTABLES)
 
 butteraugli: butteraugli.o butteraugli_main.o
+
+.PHONY: clean
+clean: 
+	rm *.o $(EXECUTABLES)
