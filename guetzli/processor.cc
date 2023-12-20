@@ -671,6 +671,7 @@ void Processor::SelectFrequencyMasking(const JPEGData& jpg, OutputImage* img,
       }
 
       if (global_order.empty()) {
+        GUETZLI_LOG(stats_, "No blocks to adjust\n");
         break;
       }
 
